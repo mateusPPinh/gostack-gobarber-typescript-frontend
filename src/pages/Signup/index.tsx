@@ -14,32 +14,24 @@ import getValidationErrors from '../../utils/getValidationErrors';
 const Signup: React.FC = () => {
   const formRef = useRef<FormHandles>(null);
 
-  const handleSubmit = useCallback(async (data: unknown) => {
+  // eslint-disable-next-line @typescript-eslint/ban-types
+  const handleSubmit = useCallback(async (data: object) => {
     try {
       const schema = yup.object().shape({
-        name: yup
-          .string()
-          .required('O nome é obrigatório')
-          .notOneOf(['GoBarber Admin']),
+        name: yup.string().required('O nome é obrigatório'),
         email: yup
           .string()
           .required('O email é obrigatório')
-          .notOneOf(
-            ['gobarberapp@gobarber.com'],
-            'Esse email não pode ser utilizado',
-          )
-          .email(),
+          .email('Digite um e-mail válid'),
         password: yup.string().min(6, 'A senha precisa ter 6 dígitos'),
       });
       await schema.validate(data, {
-        abortEarly: true,
+        abortEarly: false,
       });
     } catch (err) {
-      console.log(err);
+      const errors = getValidationErrors(err);
 
-      formRef.current?.setErrors({
-        name: 'Nome obrigatório',
-      });
+      formRef.current?.setErrors(errors);
     }
   }, []);
 

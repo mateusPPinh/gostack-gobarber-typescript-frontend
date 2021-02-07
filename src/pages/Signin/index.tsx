@@ -1,28 +1,79 @@
-import React from 'react';
+import React, { useCallback, useRef } from 'react';
 import { Form } from '@unform/web';
 import { FiLogIn, FiMail, FiLock } from 'react-icons/fi';
-import { Link } from 'react-router-dom';
+import { FormHandles } from '@unform/core';
+// import { Link } from 'react-router-dom';
+import * as yup from 'yup';
 
 import Input from '../../components/Input';
 import Button from '../../components/Button';
+import getValidationErrors from '../../utils/getValidationErrors';
+import { useAuth } from '../../hooks/AuthContext';
+import { useToast } from '../../hooks/ToastContext';
+
 import { Container, Content, Background } from './styles';
 
 import logo from '../../assets/logo.svg';
 
+interface SignInFormData {
+  email: string;
+  password: string;
+}
+
 const Signin: React.FC = () => {
-  function handleSubmit(data: unknown): void {
-    console.log(data);
-  }
+  const formRef = useRef<FormHandles>(null);
+
+  const { user, signIn } = useAuth();
+  const { addToast } = useToast();
+
+  console.log(user);
+
+  // eslint-disable-next-line @typescript-eslint/ban-types
+  const handleSubmit = useCallback(
+    async (data: SignInFormData) => {
+      try {
+        const schema = yup.object().shape({
+          email: yup
+            .string()
+            .required('O email é obrigatório')
+            .email('Digite um e-mail válid'),
+          password: yup.string().min(6, 'A senha precisa ter 6 dígitos'),
+        });
+        await schema.validate(data, {
+          abortEarly: false,
+        });
+
+        await signIn({
+          email: data.email,
+          password: data.password,
+        });
+      } catch (err) {
+        if (err instanceof yup.ValidationError) {
+          const errors = getValidationErrors(err);
+
+          formRef.current?.setErrors(errors);
+        }
+
+        // run a toast
+        addToast({
+          type: 'success',
+          title: 'Erro na autenticação, tente novamente',
+          description: 'Ocorreu um erro ao tentar logar, verifique seus dados.',
+        });
+      }
+    },
+    [signIn, addToast],
+  );
 
   return (
     <Container>
       <Content>
         <img src={logo} alt="GoBarber Logo" />
 
-        <Form onSubmit={handleSubmit}>
+        <Form ref={formRef} onSubmit={handleSubmit}>
           <h1>Faça seu logon</h1>
 
-          <Input name="name" placeholder="E-mail" icon={FiMail} />
+          <Input name="email" placeholder="E-mail" icon={FiMail} />
 
           <Input
             name="password"
@@ -33,13 +84,13 @@ const Signin: React.FC = () => {
 
           <Button type="submit">Logar</Button>
 
-          <Link to="/forgot-password">Esqueci minha senha</Link>
+          <a href="">Esqueci minha senha</a>
         </Form>
 
-        <Link to="/register">
+        <a href="">
           <FiLogIn color="#ff9000" size={20} />
           Não tenho conta
-        </Link>
+        </a>
       </Content>
 
       <Background />
